@@ -1,4 +1,4 @@
-import { BASE, api, escapeHtml, toSlug, formatDate, publicSiteUrl, initHeader, showFatal } from './common.js';
+import { BASE, api, escapeHtml, toSlug, formatDate, publicSiteUrl, onlineBadge, initHeader, showFatal } from './common.js';
 
 const grid = document.getElementById('siteGrid');
 const form = document.getElementById('newSiteForm');
@@ -11,33 +11,31 @@ function renderSites(sites) {
   if (!sites.length) {
     grid.innerHTML = `
       <div class="col-12">
-        <div class="card border-0 shadow-sm"><div class="card-body text-center py-5">
-          <i class="bi bi-window-plus display-5 text-primary"></i>
-          <h2 class="h5 mt-3">No sites yet</h2>
-          <p class="text-muted">Create your first site to start building pages.</p>
-          <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newSiteModal">Create a site</button>
-        </div></div>
+        <div class="card empty-state">
+          <i class="bi bi-window-plus"></i>
+          <h2 class="mt-3 mb-1">No sites yet</h2>
+          <p class="text-muted mb-4">Create your first site to start building pages.</p>
+          <div><button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newSiteModal"><i class="bi bi-plus-lg"></i>Create a site</button></div>
+        </div>
       </div>`;
     return;
   }
   grid.innerHTML = sites.map((site) => `
-    <div class="col-md-6 col-lg-4">
-      <div class="card h-100 site-card border-0 shadow-sm">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-start mb-2">
-            <h2 class="h5 card-title mb-0">${escapeHtml(site.name)}</h2>
-            ${site.online ? '<span class="badge text-bg-success">Online</span>' : '<span class="badge text-bg-secondary">Offline</span>'}
-          </div>
-          <p class="text-muted small mb-3">/sites/${escapeHtml(site.slug)}/ · ${site.role === 'owner' ? 'Owner' : 'Editor'}</p>
-          <div class="d-flex gap-4 small">
-            <div><div class="fw-semibold">${site.pageCount}</div><div class="text-muted">pages</div></div>
-            <div><div class="fw-semibold">${site.viewsLast7Days}</div><div class="text-muted">views (7 days)</div></div>
-          </div>
+    <div class="col-md-6 col-xl-4">
+      <div class="card card-interactive h-100">
+        <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+          <h2 class="card-title mb-0"><a class="card-title-link text-reset" href="${BASE}/sites/${encodeURIComponent(site.id)}">${escapeHtml(site.name)}</a></h2>
+          ${onlineBadge(site.online)}
         </div>
-        <div class="card-footer bg-transparent border-0 d-flex justify-content-between align-items-center pb-3">
+        <p class="text-muted small mb-4">/sites/${escapeHtml(site.slug)}/ · ${site.role === 'owner' ? 'Owner' : 'Editor'}</p>
+        <div class="site-stats mt-auto">
+          <div><strong>${site.pageCount}</strong><span>pages</span></div>
+          <div><strong>${site.viewsLast7Days}</strong><span>views (7 days)</span></div>
+        </div>
+        <div class="site-card-footer d-flex justify-content-between align-items-center gap-2">
           <span class="text-muted small">Updated ${formatDate(site.updatedAt)}</span>
           <div class="d-flex gap-2">
-            ${site.online ? `<a class="btn btn-sm btn-outline-secondary" href="${publicSiteUrl(site)}" target="_blank" rel="noopener">View</a>` : ''}
+            ${site.online ? `<a class="btn btn-sm btn-link" href="${publicSiteUrl(site)}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i>View</a>` : ''}
             <a class="btn btn-sm btn-primary" href="${BASE}/sites/${encodeURIComponent(site.id)}">Open</a>
           </div>
         </div>

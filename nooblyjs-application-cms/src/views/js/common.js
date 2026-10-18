@@ -63,15 +63,21 @@ export function formatBytes(bytes) {
 }
 
 const STATUS_BADGES = {
-  draft: ['text-bg-secondary', 'Draft'],
-  published: ['text-bg-success', 'Published'],
-  changed: ['text-bg-warning', 'Unpublished changes'],
-  scheduled: ['text-bg-info', 'Scheduled']
+  draft: ['bg-secondary-subtle text-secondary-emphasis', 'Draft'],
+  published: ['bg-success-subtle text-success-emphasis', 'Published'],
+  changed: ['bg-warning-subtle text-warning-emphasis', 'Unpublished changes'],
+  scheduled: ['bg-primary-subtle text-primary-emphasis', 'Scheduled']
 };
 
 export function statusBadge(status) {
-  const [cls, label] = STATUS_BADGES[status] || ['text-bg-light', status];
+  const [cls, label] = STATUS_BADGES[status] || ['bg-secondary-subtle text-secondary-emphasis', status];
   return `<span class="badge ${cls}">${label}</span>`;
+}
+
+export function onlineBadge(online) {
+  return online
+    ? '<span class="badge bg-success-subtle text-success-emphasis">Online</span>'
+    : '<span class="badge bg-secondary-subtle text-secondary-emphasis">Offline</span>';
 }
 
 export function publicSiteUrl(site) {
@@ -115,10 +121,10 @@ export function confirmDialog({ title, body, confirmLabel = 'Confirm', danger = 
     el.innerHTML = `
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-          <div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
+          <div class="modal-header"><h2 class="modal-title"></h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
           <div class="modal-body"><p class="mb-0"></p></div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="button" class="btn btn-link me-auto" data-bs-dismiss="modal">Cancel</button>
             <button type="button" class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-confirm></button>
           </div>
         </div>
