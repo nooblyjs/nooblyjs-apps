@@ -1,6 +1,8 @@
 # Product Requirements Document (PRD)
 ## NooblyJS CMS Platform - A Wix-Like Content Management System
 
+> **Status:** This is a planning document. Most of what it describes has not been built yet; see [index.md](index.md) for what exists today. It proposes a React or Vue front end with Tailwind, while the app and its sibling blog and wiki apps currently use Bootstrap 5 with plain JavaScript.
+
 **Version**: 1.0
 **Date**: October 2024
 **Status**: Draft

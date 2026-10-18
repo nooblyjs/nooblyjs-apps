@@ -1,6 +1,8 @@
 # CMS Platform Development Task List
 ## Detailed Implementation Tasks by Phase
 
+> **Status:** This is a planning document. Most of what it describes has not been built yet; see [index.md](index.md) for what exists today. It proposes a React/Vite/Tailwind front end, while the app and its sibling blog and wiki apps currently use Bootstrap 5 with plain JavaScript.
+
 **Status**: Ready for Implementation
 **Total Tasks**: 180+ hours of development
 **Estimated Team**: 6-8 engineers
@@ -21,7 +23,7 @@
   - Effort: 2 hours
 
 - [ ] **1.1.3** Initialize Nooblyjs-core service registry
-  - Install `noobly-core` package
+  - Install `nooblyjs-core` package
   - Create `app.js` with service initialization
   - Initialize: authservice, dataservice, logging, filing, caching
   - Effort: 8 hours

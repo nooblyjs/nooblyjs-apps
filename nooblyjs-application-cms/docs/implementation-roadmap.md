@@ -1,6 +1,8 @@
 # Implementation Roadmap
 ## NooblyJS CMS Platform - Detailed Development Breakdown
 
+> **Status:** This is a planning document. Most of what it describes has not been built yet; see [index.md](index.md) for what exists today. It proposes a React/Vite/Tailwind front end, while the app and its sibling blog and wiki apps currently use Bootstrap 5 with plain JavaScript.
+
 **Framework**: Nooblyjs-core microservices architecture
 **Estimated Duration**: 12 months
 **Team Size**: 6-8 engineers
@@ -62,7 +64,7 @@ nooblyjs-apps-cms/
 ```javascript
 // app.js - Service initialization
 const express = require('express');
-const serviceRegistry = require('noobly-core');
+const serviceRegistry = require('nooblyjs-core');
 const session = require('express-session');
 const passport = require('passport');
 
@@ -1142,7 +1144,7 @@ const componentTypes = {
 {
   "runtime": "Node.js 18+",
   "framework": "Express.js",
-  "microservices": "noobly-core 1.0.14+",
+  "microservices": "nooblyjs-core",
   "database": "MongoDB / File-based",
   "cache": "Redis",
   "storage": "AWS S3 / Local",

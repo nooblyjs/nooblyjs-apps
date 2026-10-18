@@ -2,18 +2,20 @@
   "name": "nooblyjs-apps-cms",
   "version": "1.0.0",
   "description": "A full-featured CMS platform built with Nooblyjs-core, Express, and Bootstrap 5",
-  "homepage": "https://github.com/nooblyjs/nooblyjs-applicationsg#readme",
+  "homepage": "https://github.com/nooblyjs/nooblyjs-applications#readme",
   "bugs": {
     "url": "https://github.com/nooblyjs/nooblyjs-applications/issues"
   },
   "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nooblyjs/nooblyjs-applications.git"
   },
   "license": "ISC",
   "author": "",
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-    "start": "node app.js",
+    "dev": "node app.js",
     "kill": "  kill -9 $(lsof -t -i:3004)"
   },
   "dependencies": {

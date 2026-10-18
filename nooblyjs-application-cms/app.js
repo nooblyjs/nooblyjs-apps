@@ -1,5 +1,5 @@
 /**
- * @fileoverview The file define and instantiates the various NooblyJS applications.
+ * @fileoverview Defines and instantiates the NooblyJS CMS application.
  *
  * @author NooblyJS Core Team
  * @version 1.0.1
@@ -10,17 +10,14 @@
 
 const express = require('express');
 const http = require('http');
-const bodyParser = require('body-parser');
 const session = require('express-session');
 const passport = require('passport');
 const path = require('path');
 const { EventEmitter } = require('events');
 
-// Iniitiate the Web and Api Interface
+// Initiate the Web and Api Interface
 const app = express();
 const server = http.createServer(app);
-app.use(bodyParser.urlencoded({ extended: true, limit: '100mb' }));
-app.use(bodyParser.json({ limit: '100mb' }));
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
@@ -58,13 +55,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Launch the application docs folder
 app.use('/docs', express.static(path.join(__dirname, 'docs')));
 
-// Launch the application docs folder
+// Serve the application README
 app.use('/readme', express.static(path.join(__dirname, 'README.md')));
 
 // Initiate the CMS
 const cms = require('.');
 cms(app, server, eventEmitter, serviceRegistry, options);
 
-app.listen(process.env.PORT || 3004, () => {
+server.listen(process.env.PORT || 3004, () => {
   log.info(`Nooblyjs Content Server running on port ${process.env.PORT || 3004}`);
 });

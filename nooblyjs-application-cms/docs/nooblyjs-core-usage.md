@@ -1,15 +1,14 @@
 # NooblyJS Core - AI Assistant Reference Guide
 
 > **Purpose**: This guide is optimized for AI assistants to help developers implement nooblyjs-core.
-> **Version**: 1.0.14+
-> **Package**: `noobly-core` on npm
+> **Package**: `nooblyjs-core` (this app installs it from `../../nooblyjs-core`)
 
 ## Installation & Basic Setup
 
 ### Minimal Setup
 ```javascript
 const express = require('express');
-const serviceRegistry = require('noobly-core');
+const serviceRegistry = require('nooblyjs-core');
 
 const app = express();
 app.use(express.json());
@@ -30,7 +29,7 @@ app.listen(3000);
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
-const serviceRegistry = require('noobly-core');
+const serviceRegistry = require('nooblyjs-core');
 
 const app = express();
 app.use(express.json());
@@ -401,7 +400,7 @@ GET /services/ai/api/status
 ### Pattern 1: Basic CRUD API
 ```javascript
 const express = require('express');
-const serviceRegistry = require('noobly-core');
+const serviceRegistry = require('nooblyjs-core');
 
 const app = express();
 app.use(express.json());
@@ -798,7 +797,7 @@ const status = await authservice.getStatus();
 const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
-const serviceRegistry = require('noobly-core');
+const serviceRegistry = require('nooblyjs-core');
 
 const app = express();
 app.use(express.json());
@@ -1615,7 +1614,7 @@ OLLAMA_URL=http://localhost:11434
 ## Additional Resources
 
 - **GitHub**: https://github.com/nooblyjs/nooblyjs-core
-- **NPM**: https://www.npmjs.com/package/noobly-core
+- **NPM**: https://www.npmjs.com/package/nooblyjs-core
 - **Built-in Docs**: Start server and visit `/services/` for interactive documentation
 - **API Tests**: See `tests/api/` directory for HTTP file examples
 - **Example Apps**: See `tests/app-*.js` for complete working examples
