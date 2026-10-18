@@ -18,7 +18,7 @@ NooblyJS Blog is a Medium-inspired publishing platform built on top of the Noobl
 
 ```bash
 # Start development server (runs on port 3003 by default)
-npm run dev:web
+npm run dev
 
 # Stop server (kills process on port 3003)
 npm run kill
@@ -31,8 +31,11 @@ npm run kill
 - Service data (users, sessions): `./.app-blog/data` (set via `options.dataDir` in `app.js`)
 - Site settings: `./.data/blog-settings.json`
 - Posts storage: `./posts/published` and `./posts/drafts` (scheduled posts live in `drafts`)
+- `./.env` is loaded at startup; variables already set in the environment take precedence
 - `SESSION_SECRET`: required when `NODE_ENV=production`
 - First run creates an `admin@localhost` user; its password is written to `./.app-blog/data/INITIAL_ADMIN_PASSWORD.txt` (or set `DEFAULT_ADMIN_PASSWORD`)
+- `AUTH_METHOD`: `local` (default, email + password) or `google`. Any other value (including `azure`, which the blog does not wire up) falls back to `local` with a warning. The password form stays available at `/services/authservice/views/login.html?local=1`
+- Google sign-in needs `GOOGLE_AUTH_CLIENTID` and `GOOGLE_AUTH_SECRET`. The redirect URI registered with Google is `{base url}/services/authservice/openid`; the base URL comes from the request unless `GOOGLE_AUTH_BASE_URL` is set (set it behind a proxy). Google users are created in the file user store with the `user` role and need `admin` to author. Assign it with `PUT /services/authservice/api/users/:email` (`{"roles":["user","admin"]}`): core's `POST .../role` is not saved to disk
 
 ## Architecture Overview
 
@@ -55,6 +58,7 @@ Services are instantiated as singletons using the provider pattern:
 - `searching('memory')` - Full-text search
 - `measuring('memory')` - Metrics collection
 - `authservice('file')` - Authentication
+- `authservice('google')` - Only when `AUTH_METHOD=google`; supplies the passport strategy while users stay in the file provider. `app.js` also answers `/services/authservice/api/sso-config` (core's version only knows Azure) and serves `/services/authservice/openid`, which starts the Google sign-in and receives Google's redirect
 
 ### Application Factory (`index.js`)
 
@@ -82,7 +86,7 @@ The routes layer orchestrates:
 3. **Search indexing**: Posts are automatically indexed for full-text search when published
 4. **Feed caching**: Home feed is cached for 1 minute to reduce computation
 
-**Authentication:** Author actions reuse `serviceRegistry.servicesAuthMiddleware` (admin role, via session cookie, `Authorization: Bearer <token>`, or API key). Guarded endpoints are marked 🔒 below; unauthenticated calls get 401 JSON. Reader actions (claps, bookmarks, new comments) stay public.
+**Authentication:** Author actions reuse `serviceRegistry.servicesAuthMiddleware` (admin role, via session cookie (including Google sign-in), `Authorization: Bearer <token>`, or API key). Guarded endpoints are marked 🔒 below; unauthenticated calls get 401 JSON. Reader actions (claps, bookmarks, new comments) stay public.
 
 **Key API Endpoints:**
 - `GET /api/status` - Service health

@@ -572,11 +572,9 @@ function registerEvents() {
   });
 }
 
+// No token check here: the server only serves this page to a signed-in admin, and Google sign-ins
+// use the session cookie rather than a stored token.
 function init() {
-  if (!authToken && !localStorage.getItem(TOKEN_STORAGE_KEY)) {
-    setAlert('Authentication token missing. Please sign in again.', 'danger');
-    return;
-  }
   registerEvents();
   resetForm();
   loadPosts();
