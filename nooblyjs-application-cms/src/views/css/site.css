@@ -1,0 +1,108 @@
+/* Styles for published CMS sites. Theme values come from CSS variables set per site. */
+body {
+  background: var(--site-bg, #fff);
+  color: var(--site-text, #212529);
+  font-family: var(--site-body-font, system-ui, sans-serif);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--site-heading-font, inherit);
+}
+
+a {
+  color: var(--site-primary, #0d6efd);
+}
+
+.site-navbar {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.site-navbar .navbar-brand {
+  font-family: var(--site-heading-font, inherit);
+  font-weight: 700;
+  color: var(--site-text, #212529);
+}
+
+.site-navbar .nav-link {
+  color: var(--site-text, #212529);
+}
+
+.site-navbar .nav-link.active,
+.site-navbar .nav-link:hover {
+  color: var(--site-primary, #0d6efd);
+}
+
+.site-navbar .dropdown-item.active,
+.site-navbar .dropdown-item:active {
+  background-color: var(--site-primary, #0d6efd);
+}
+
+.site-logo {
+  max-height: 40px;
+  width: auto;
+}
+
+.site-content {
+  flex: 1;
+  padding-top: 2.5rem;
+  padding-bottom: 3rem;
+  max-width: 860px;
+  line-height: 1.7;
+}
+
+.site-content img {
+  max-width: 100%;
+  height: auto;
+}
+
+.site-content blockquote {
+  border-left: 4px solid var(--site-primary, #0d6efd);
+  padding-left: 1rem;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.site-content pre {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 1rem;
+  border-radius: 6px;
+  white-space: pre-wrap;
+}
+
+.site-content iframe.ql-video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  border: 0;
+}
+
+/* Quill alignment and indent classes */
+.ql-align-center { text-align: center; }
+.ql-align-right { text-align: right; }
+.ql-align-justify { text-align: justify; }
+.ql-indent-1 { padding-left: 3em; }
+.ql-indent-2 { padding-left: 6em; }
+.ql-indent-3 { padding-left: 9em; }
+.ql-indent-4 { padding-left: 12em; }
+.ql-indent-5 { padding-left: 15em; }
+.ql-size-small { font-size: 0.75em; }
+.ql-size-large { font-size: 1.5em; }
+.ql-size-huge { font-size: 2.5em; }
+
+.site-footer {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 1.5rem 0;
+  opacity: 0.85;
+}
+
+.preview-banner {
+  background: #fff3cd;
+  color: #664d03;
+  text-align: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #ffe69c;
+}
