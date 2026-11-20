@@ -1,0 +1,255 @@
+// Approvals reach people where they are (Phase 12): when an approval is requested, each reviewer gets a message in
+// Microsoft Teams and an email in Outlook, each with a link that opens the approval in NooblyJS. Neither can decide it:
+// approving is a person's action, in NooblyJS.
+//
+//   Teams    a card in the reviewer's personal chat with the NooblyJS app. NooblyJS can only write there once the person
+//            has the app (Teams tells the bot when they install it or write to it; that address is kept in
+//            data/teams/people/<id>.yaml). Sent when their profile says "approvals in Teams".
+//   Outlook  an email through Microsoft Graph (app-only: POST /users/{sender}/sendMail, Mail.Send), from
+//            MS_GRAPH_SENDER. Sent unless their profile turns approval emails off.
+//
+// Each notification, sent or not, is audited (notify.approval_sent / notify.approval_skipped / notify.failed).
+//
+// Phase 23: ON-CALL ALERTS (Operations: an SLO's error budget burning) go to the on-call channel in Teams: the
+// conversation TEAMS_ONCALL_CONVERSATION names ([PLACEHOLDER] until one is chosen), through the bot; in development, the
+// simulator's "On-call" channel at /dev/teams. Audited too (notify.alert_sent / notify.alert_skipped).
+import crypto from 'node:crypto';
+
+const PEOPLE_DIR = ['teams', 'people'];
+const KIND_WORDS = {
+  spec: 'Product handoff', adr: 'Architecture decision', 'design-handoff': 'Design handoff', 'engineering-signoff': 'Engineering sign-off',
+  'build-approval': 'Build approval', 'test-approval': 'Test approval', deploy: 'Production deploy', 'outcome-review': 'Outcome review',
+  'ui-handoff': 'Handoff to the Software Factory', merge: 'Merge', stage: 'Move to the next stage', 'infra-design': 'Infrastructure design',
+};
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/**
+ * @param {object} o
+ * @param {object} o.config   { publicBaseUrl, graph: { tenantId, clientId, secret, sender }, teams: { appId } }
+ * @param {{ createPersonal, send, configured }} o.connector  the Teams bot's connector
+ * @param {{ attachment }} o.cards
+ */
+export function createNotify({ store, people, profiles, connector, cards, events, auditLog, config, fetch: fetchImpl = globalThis.fetch, clock = Date, log, onCallSimulator = null }) {
+  const base = String(config.publicBaseUrl || '').replace(/\/+$/, '');
+  const linkTo = (path) => `${base}${path}`;
+  const graph = config.graph ?? {};
+  const emailReady = Boolean(graph.tenantId && graph.clientId && graph.secret && graph.sender);
+  let graphToken = null;
+  const audit = (entry) => auditLog.record(entry).catch((err) => log?.warn?.(`notify audit: ${err.message}`));
+
+  // ---------------------------------------------------------------------------- where a person is in Teams
+
+  /** Keeps how to reach a person in Teams, from an activity they sent the bot (any chat; personal is best). */
+  async function remember(person, a) {
+    if (a.via !== 'teams' || !a.serviceUrl || !a.from?.id) return;
+    const file = [...PEOPLE_DIR, `${person.id}.yaml`];
+    const known = (await store.readYaml(file)) ?? {};
+    const next = {
+      personId: person.id, userId: a.from.id, serviceUrl: a.serviceUrl, tenantId: a.tenantId ?? known.tenantId ?? null,
+      conversationId: a.personal ? a.conversationId : known.conversationId ?? null,
+      botId: a.recipient?.id ?? known.botId ?? null,
+    };
+    if (JSON.stringify({ ...known, updatedAt: undefined }) === JSON.stringify({ ...next, updatedAt: undefined })) return;
+    await store.writeYaml(file, { ...next, updatedAt: new Date(clock.now()).toISOString() });
+  }
+
+  async function teamsMessage(person, approval) {
+    return teamsSend(person, {
+      type: 'message',
+      summary: `Approval waiting: ${approval.title}`,
+      attachments: [cards.attachment('approval-waiting', { title: approval.title, item: approval.item, requestedBy: approval.requestedBy, kind: approval.kind, url: approval.url })],
+    });
+  }
+
+  /** Sends an activity to the person's personal chat with the NooblyJS app: { sent, why? }. */
+  async function teamsSend(person, activity) {
+    const ref = await store.readYaml([...PEOPLE_DIR, `${person.id}.yaml`]);
+    if (!ref?.serviceUrl || !ref.userId) return { sent: false, why: 'they have not installed the NooblyJS app in Teams' };
+    if (!connector.configured) return { sent: false, why: 'NooblyJS has no Teams bot registered' };
+    let conversationId = ref.conversationId;
+    if (!conversationId) {
+      conversationId = await connector.createPersonal({ serviceUrl: ref.serviceUrl, tenantId: ref.tenantId, userId: ref.userId });
+      await store.writeYaml([...PEOPLE_DIR, `${person.id}.yaml`], { ...ref, conversationId, updatedAt: new Date(clock.now()).toISOString() });
+    }
+    const a = { via: 'teams', serviceUrl: ref.serviceUrl, conversationId, recipient: { id: ref.botId ?? `28:${config.teams?.appId}`, name: 'NooblyJS' }, from: { id: ref.userId, name: person.name } };
+    await connector.send(a, activity);
+    return { sent: true };
+  }
+
+  // ---------------------------------------------------------------------------- email through Microsoft Graph
+
+  async function graphAccessToken() {
+    if (graphToken && clock.now() < graphToken.until) return graphToken.value;
+    const res = await fetchImpl(`https://login.microsoftonline.com/${encodeURIComponent(graph.tenantId)}/oauth2/v2.0/token`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'client_credentials', client_id: graph.clientId, client_secret: graph.secret, scope: 'https://graph.microsoft.com/.default' }).toString(),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || !body.access_token) throw new Error(`Microsoft did not give NooblyJS a Graph token: ${body.error_description ?? body.error ?? `HTTP ${res.status}`}`);
+    graphToken = { value: body.access_token, until: clock.now() + Math.max(60, (Number(body.expires_in) || 3600) - 300) * 1000 };
+    return graphToken.value;
+  }
+
+  async function email(person, approval) {
+    if (!emailReady) return { sent: false, why: 'email is not set up (MS_GRAPH_* in NooblyJS\'s environment)' };
+    if (!person.email) return { sent: false, why: 'they have no email address in NooblyJS' };
+    const html = `<p style="font-family:Segoe UI,Arial,sans-serif;color:#241C1A">An approval in NooblyJS is waiting for you.</p>
+<p style="font-family:Segoe UI,Arial,sans-serif;font-size:16px;color:#241C1A"><strong>${escapeHtml(approval.title)}</strong></p>
+<p style="font-family:Segoe UI,Arial,sans-serif;color:#3A4456">${escapeHtml(approval.kind)} · ${escapeHtml(approval.item)} · asked by ${escapeHtml(approval.requestedBy)}</p>
+<p><a href="${escapeHtml(approval.url)}" style="font-family:Segoe UI,Arial,sans-serif;background:#C2471F;color:#FFFFFF;padding:10px 18px;border-radius:999px;text-decoration:none">Open the approval</a></p>
+<p style="font-family:Segoe UI,Arial,sans-serif;font-size:12px;color:#4A5466">Decide it in NooblyJS. Replying to this email does nothing.</p>`;
+    const res = await fetchImpl(`https://graph.microsoft.com/v1.0/users/${encodeURIComponent(graph.sender)}/sendMail`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${await graphAccessToken()}` },
+      body: JSON.stringify({
+        message: { subject: `Approval waiting: ${approval.title}`, body: { contentType: 'HTML', content: html }, toRecipients: [{ emailAddress: { address: person.email, name: person.name } }] },
+        saveToSentItems: false,
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) throw new Error(`Microsoft Graph did not send the email (HTTP ${res.status}): ${(await res.text().catch(() => '')).slice(0, 200)}`);
+    return { sent: true };
+  }
+
+  // ---------------------------------------------------------------------------- approval.requested
+
+  async function onApprovalRequested(event) {
+    const p = event.payload ?? {};
+    const reviewers = Array.isArray(p.reviewerIds) ? p.reviewerIds : [];
+    if (!p.approvalId || !reviewers.length) return [];
+    const asker = event.actor ? await people.get(event.actor).catch(() => null) : null;
+    const approval = {
+      id: p.approvalId,
+      title: String(p.summary ?? '').replace(/^asked for (the )?review of /i, '') || p.itemId || 'An approval',
+      item: p.itemId ?? '',
+      kind: KIND_WORDS[p.type] ?? 'Approval',
+      requestedBy: asker?.name ?? p.actorName ?? 'NooblyJS',
+      url: linkTo(`/home/approvals?id=${encodeURIComponent(p.approvalId)}`),
+    };
+    const results = [];
+    for (const id of reviewers) {
+      const person = await people.get(id).catch(() => null);
+      if (!person?.active) continue;
+      const prefs = (await profiles.get(person.id).catch(() => null))?.notifications ?? {};
+      for (const [channel, wanted, send] of [['teams', prefs.approvalsInTeams === true, teamsMessage], ['email', prefs.approvalsByEmail !== false, email]]) {
+        const base = { actor: 'notify', target: person.id, approvalId: approval.id, itemId: approval.item, channel };
+        if (!wanted) {
+          results.push({ person: person.id, channel, sent: false, why: 'their profile turns it off' });
+          continue;
+        }
+        try {
+          const r = await send(person, approval);
+          results.push({ person: person.id, channel, ...r });
+          await audit({ ...base, action: r.sent ? 'notify.approval_sent' : 'notify.approval_skipped', ...(r.why ? { reason: r.why } : {}) });
+        } catch (err) {
+          results.push({ person: person.id, channel, sent: false, why: err.message });
+          log?.warn?.(`notify: ${channel} to ${person.id} for ${approval.id} failed: ${err.message}`);
+          await audit({ ...base, action: 'notify.failed', reason: err.message });
+        }
+      }
+    }
+    return results;
+  }
+
+  const pending = new Set();
+  const unsubscribe = events.on('approval.requested', (event) => {
+    const run = onApprovalRequested(event).catch((err) => log?.error?.(`notify: ${err.message}`)).finally(() => pending.delete(run));
+    pending.add(run);
+    return run;
+  });
+
+  /**
+   * Phase 23: an alert to whoever is on call, in Teams. Resolves with { sent, where, why? }; it never throws for a
+   * channel that isn't there (the alert is still an event and an audit record).
+   */
+  async function alert({ title, text = '', link = null, itemId = null, source = null } = {}) {
+    const words = `${String(title ?? 'Alert').slice(0, 200)}${text ? `: ${String(text).slice(0, 1000)}` : ''}${link ? ` ${linkTo(link)}` : ''}`;
+    const activity = { type: 'message', text: words, channelData: { noobly: { kind: 'alert' } } };
+    const onCall = config.teams?.onCall ?? null;
+    let result;
+    try {
+      if (onCall?.serviceUrl && onCall?.conversationId && connector.configured) {
+        await connector.send({ via: 'teams', serviceUrl: onCall.serviceUrl, conversationId: onCall.conversationId, recipient: { id: `28:${config.teams?.appId}`, name: 'NooblyJS' }, from: { id: 'on-call', name: 'On call' } }, activity);
+        result = { sent: true, where: 'teams' };
+      } else if (onCallSimulator) {
+        await connector.send({ via: 'simulator', conversationId: onCallSimulator }, activity);
+        result = { sent: true, where: 'simulator', conversationId: onCallSimulator };
+      } else {
+        result = { sent: false, why: 'no on-call channel in Teams is configured (TEAMS_ONCALL_CONVERSATION)' };
+      }
+    } catch (err) {
+      result = { sent: false, why: err.message };
+    }
+    await audit({ actor: 'notify', action: result.sent ? 'notify.alert_sent' : 'notify.alert_skipped', target: result.where ?? 'teams', itemId, source, title: String(title ?? '').slice(0, 200), ...(result.why ? { reason: result.why } : {}) });
+    await events.emit('oncall.alerted', { system: 'platform', itemId, source, title, sent: result.sent, where: result.where ?? null, summary: `alerted on call${result.sent ? ' in Teams' : ' (not sent: no channel)'}: ${title}` }, { actor: null });
+    return result;
+  }
+
+  // ---------------------------------------------------------------------------- telling people (Phase 25a)
+
+  const NOTICES = (personId) => ['notices', `${personId}.yaml`];
+  const KEEP_NOTICES = 50;
+
+  /**
+   * Tells people something they asked to hear about (Product: a feature they asked for shipped; its outcome review).
+   * Each gets a notice on their For you page and, when they have the NooblyJS app in Teams, a message there. The same
+   * `key` reaches a person once. Resolves with one row per person: { person, told, teams, why? }. Never throws for a
+   * channel that isn't there; each person's result is audited (notify.told / notify.tell_skipped).
+   */
+  async function tell({ to = [], title, text = '', link = null, key = null, system = null, itemId = null } = {}) {
+    const words = String(title ?? '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!words) throw new Error('A notice needs a title.');
+    const body = String(text ?? '').slice(0, 2000);
+    const at = new Date(clock.now()).toISOString();
+    const results = [];
+    for (const id of [...new Set(to.filter((x) => typeof x === 'string' && x))]) {
+      const person = await people.get(id).catch(() => null);
+      if (!person?.active) {
+        results.push({ person: id, told: false, why: 'no active NooblyJS record' });
+        continue;
+      }
+      const notice = { id: `ntc_${crypto.randomBytes(6).toString('hex')}`, key: key ? String(key).slice(0, 200) : null, title: words, text: body, link, system, itemId, at };
+      const added = await store.withLock(NOTICES(person.id), async () => {
+        const doc = (await store.readYaml(NOTICES(person.id))) ?? {};
+        const list = Array.isArray(doc.notices) ? doc.notices : [];
+        if (notice.key && list.some((n) => n.key === notice.key)) return false;
+        await store.writeYaml(NOTICES(person.id), { notices: [notice, ...list].slice(0, KEEP_NOTICES) });
+        return true;
+      });
+      if (!added) {
+        results.push({ person: person.id, told: false, why: 'already told' });
+        continue;
+      }
+      let teams;
+      try {
+        teams = await teamsSend(person, { type: 'message', text: `${words}${body ? `\n\n${body}` : ''}${link ? `\n\n${linkTo(link)}` : ''}` });
+      } catch (err) {
+        teams = { sent: false, why: err.message };
+      }
+      results.push({ person: person.id, told: true, teams: teams.sent, ...(teams.why ? { why: teams.why } : {}) });
+      await audit({ actor: 'notify', action: 'notify.told', target: person.id, system, itemId, title: words, teams: teams.sent, ...(teams.why ? { reason: `Teams: ${teams.why}` } : {}) });
+    }
+    const told = results.filter((r) => r.told).map((r) => r.person);
+    if (told.length) await events.emit('notify.told', { system, itemId, people: told, title: words, summary: `told ${told.length} ${told.length === 1 ? 'person' : 'people'}: ${words}` }, { actor: null });
+    return results;
+  }
+
+  /** A person's notices, newest first (For you). */
+  async function notices(personId, { limit = 10 } = {}) {
+    const doc = (await store.readYaml(NOTICES(personId)).catch(() => null)) ?? {};
+    return (Array.isArray(doc.notices) ? doc.notices : []).slice(0, limit).map((n) => ({ ...n, href: n.link ?? null }));
+  }
+
+  return {
+    remember,
+    onApprovalRequested,
+    alert,
+    tell,
+    notices,
+    status: () => ({ email: emailReady, teams: connector.configured, sender: emailReady ? graph.sender : null }),
+    settled: async () => { while (pending.size) await Promise.allSettled([...pending]); },
+    close: () => unsubscribe?.(),
+  };
+}

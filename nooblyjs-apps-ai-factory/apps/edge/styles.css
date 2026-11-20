@@ -1,0 +1,95 @@
+/* NooblyJS's theme (nooblyjs-core/public/ui/css/tokens.css, the shared Noobly styles.css), restated here because an
+   extension page can't load /ui/ */
+:root {
+  --navy: #241C1A;
+  --accent: #C2471F;
+  --accent-soft: #FCE3D6;
+  --link: #A63F1C;
+  --ink: #241C1A;
+  --muted: #6B605A;
+  --line: #E6DED8;
+  --surface: #FFFFFF;
+  --page: #F5F1EE;
+  --ok: #1C5A5F;
+  --ok-soft: #DDEFEC;
+  --danger: #B42335;
+  --danger-soft: #FADDE2;
+  --radius: 14px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #F5F1EE;
+    --muted: #CDBFB7;
+    --line: #4A3F3A;
+    --surface: #2E2523;
+    --page: #1B1513;
+    --accent-soft: #4A2A1E;
+    --link: #F2A27E;
+    --ok: #9FD6CF;
+    --ok-soft: #173A3C;
+    --danger: #F7A8B6;
+    --danger-soft: #45201D;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font: 14px/1.45 Figtree, "Segoe UI", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--page);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+h1 { font-family: "Bricolage Grotesque", Figtree, "Segoe UI", system-ui, sans-serif; font-size: 16px; margin: 0; }
+h2 { font-size: 13px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+a { color: var(--link); }
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+
+.bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 12px; background: var(--navy); color: #fff;
+}
+.bar img { border-radius: 6px; box-shadow: 0 0 0 1px rgba(255,255,255,.4); }
+.bar .pill { margin-left: auto; }
+
+.who { margin: 0; padding: 8px 12px; background: var(--surface); border-bottom: 1px solid var(--line); }
+.muted-inline { color: var(--muted); }
+
+main { flex: 1; padding: 12px; display: grid; gap: 12px; align-content: start; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+.muted { color: var(--muted); margin: 0; }
+
+.pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.pill-muted { background: rgba(255,255,255,.15); color: #fff; }
+.pill-ok { background: var(--ok-soft); color: var(--ok); }
+.pill-danger { background: var(--danger-soft); color: var(--danger); }
+
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0 0 8px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+
+.messages { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 8px; }
+.message { padding: 8px 10px; border-radius: 10px; background: var(--accent-soft); }
+.message-system { background: transparent; border: 1px dashed var(--line); color: var(--muted); }
+
+.composer { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+textarea, input[type="url"] {
+  width: 100%; font: inherit; color: inherit; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; resize: vertical;
+}
+button {
+  font: inherit; font-weight: 600; min-height: 36px; padding: 0 14px;
+  border: 0; border-radius: 999px; background: var(--accent); color: #fff; cursor: pointer;
+}
+button:disabled, textarea:disabled { opacity: .55; cursor: not-allowed; }
+
+.foot { display: flex; gap: 16px; padding: 10px 12px; border-top: 1px solid var(--line); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.options { padding: 16px; display: grid; gap: 12px; max-width: 520px; }
+.options label { font-weight: 600; }
+.options .row { display: flex; gap: 8px; }

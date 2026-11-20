@@ -1,0 +1,26 @@
+{
+  "name": "nooblyjs-apps",
+  "version": "1.0.0",
+  "description": "Workspace runner for the NooblyJS applications (blog, cms, wiki)",
+  "private": true,
+  "license": "ISC",
+  "scripts": {
+    "postinstall": "npm run install:all",
+    "install:all": "npm run install:blog && npm run install:cms && npm run install:wiki",
+    "install:blog": "npm --prefix nooblyjs-application-blog install",
+    "install:cms": "npm --prefix nooblyjs-application-cms install",
+    "install:wiki": "npm --prefix nooblyjs-application-wiki install && npm --prefix nooblyjs-application-wiki run install:backend && npm --prefix nooblyjs-application-wiki run install:web",
+
+    "blog": "npm --prefix nooblyjs-application-blog run dev",
+    "cms": "npm --prefix nooblyjs-application-cms run dev",
+    "wiki": "npm --prefix nooblyjs-application-wiki run dev",
+
+    "test": "npm run test:cms && npm run test:wiki",
+    "test:cms": "npm --prefix nooblyjs-application-cms test",
+    "test:wiki": "npm --prefix nooblyjs-application-wiki run tests",
+
+    "kill:blog": "npm --prefix nooblyjs-application-blog run kill",
+    "kill:cms": "npm --prefix nooblyjs-application-cms run kill",
+    "kill:wiki": "npm --prefix nooblyjs-application-wiki run kill"
+  }
+}

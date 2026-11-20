@@ -1,0 +1,34 @@
+{
+  "name": "nooblyjs-apps-hero-co",
+  "version": "0.1.0",
+  "description": "NooblyJS Cloud: self-service hosting (repo to live service, metrics and logs) on nooblyjs-core and the infrastructure, customers and payments accelerators.",
+  "license": "UNLICENSED",
+  "private": true,
+  "type": "module",
+  "main": "app.js",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env app.js",
+    "dev": "nodemon --watch src --watch public --watch app.js app.js",
+    "seed": "node --env-file-if-exists=.env app.js --seed",
+    "test": "node --test --test-force-exit \"test/**/*.test.js\"",
+    "test:ui": "playwright test",
+    "test:ui:install": "playwright install chromium"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "express-session": "^1.19.0",
+    "helmet": "^8.1.0",
+    "nooblyjs-accel-customers": "file:../../nooblyjs-accl/nooblyjs-accel-customers",
+    "nooblyjs-accelerator-infrastructure": "file:../../nooblyjs-accl/nooblyjs-accl-infrastructure",
+    "nooblyjs-core": "file:../../nooblyjs-core",
+    "passport": "^0.7.0",
+    "passport-github2": "^0.1.12"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.50.0",
+    "nodemon": "^3.1.10"
+  }
+}

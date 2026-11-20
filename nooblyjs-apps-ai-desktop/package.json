@@ -1,0 +1,46 @@
+{
+  "name": "llm-project-desktop",
+  "version": "1.0.0",
+  "description": "This is an opportunity to create the project aspects of claude code for any llm",
+  "homepage": "https://github.com/StephenBooysen/llm-project-desktop#readme",
+  "bugs": {
+    "url": "https://github.com/StephenBooysen/llm-project-desktop/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StephenBooysen/llm-project-desktop.git"
+  },
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node ./app.js",
+    "run": "npm start",
+    "test": "node --test --test-force-exit test/*.test.js",
+    "coverage": "node --test --experimental-test-coverage test/*.test.js",
+    "build": "node -e \"console.log('No build step: plain JavaScript')\"",
+    "clean": "node -e \"for (const d of ['node_modules','coverage','dist']) require('fs').rmSync(d, { recursive: true, force: true })\"",
+    "dev": "nodemon --watch ./src ./app.js",
+    "dev:noauth": "nodemon --watch ./src ./app-noauth.js",
+    "kill": "node scripts/kill-port.js",
+    "kill-test": "node scripts/kill-test-port.js",
+    "test:ui": "node --test --test-concurrency=1 test/ui/*.test.js"
+  },
+  "dependencies": {
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
+    "dompurify": "^3.4.15",
+    "dotenv": "^17.4.2",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1",
+    "marked": "^18.0.12",
+    "nodemon": "^3.1.14",
+    "nooblyjs-core": "file:../../nooblyjs-core"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0",
+    "supertest": "^7.2.2"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
